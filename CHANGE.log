@@ -1,0 +1,6 @@
+2026-10-08 — v1.0.0
+- Première version de l'atelier d'anonymisation local, sans serveur ni dépendances.
+- Détection de secrets, emails, téléphones, IP, champs structurés JSON/XML/CSV.
+- Vérification, navigation, ajout manuel, restauration et export fidèle avec rapport JSON.
+- Encodages UTF-8, UTF-16 et Windows-1252/ISO-8859-1 selon détection; conservation BOM.
+- PWA installable et hors ligne sous /anonymise/; workflow GitHub Pages.
