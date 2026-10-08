@@ -92,7 +92,7 @@ function analyze(){
 function masked(value,type){
  let seed=0;for(let i=0;i<value.length;i++)seed=(Math.imul(seed,33)+value.charCodeAt(i))|0;
  const letters='abcdefghjkmnpqrstuvwxyz',digits='0123456789';
- return Array.from(value,(c,i)=>{const n=Math.abs((seed+i*71+i*i*13)|0);if(/[0-9]/.test(c))return digits[n%10];if(/[A-Z]/.test(c))return letters[n%letters.length].toUpperCase();if(/[a-z]/.test(c))return letters[n%letters.length];return c}).join('');
+ return Array.from(value,(c,i)=>{const n=Math.abs((seed+i*71+i*i*13)|0);if(/[0-9]/.test(c))return digits[n%10];if(/[A-Z]/.test(c)||(/\p{Lu}/u.test(c)))return letters[n%letters.length].toUpperCase();if(/[a-z]/.test(c)||(/\p{Ll}/u.test(c)))return letters[n%letters.length];return c}).join('');
 }
 function replacement(z){const raw=state.source.slice(z.start,z.end);if(z.strategy==='keep')return raw;if(z.strategy==='redact')return '[REDACTED]';return masked(raw,z.type)}
 function sanitize(){let result=state.source;for(const z of state.zones.filter(z=>z.strategy!=='keep').sort((a,b)=>b.start-a.start))result=result.slice(0,z.start)+replacement(z)+result.slice(z.end);return result}
