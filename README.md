@@ -17,3 +17,6 @@ Aucune compilation : serveur statique à la racine, ex. `python3 -m http.server 
 
 ## Licence
 Aucune licence spécifiée.
+
+## Office v1.1
+DOCX et XLSX sont lus et écrits localement via ZIP/OOXML. Les textes Word, les cellules des feuilles Excel et les chaînes partagées sont analysés. Les segments XML peuvent être fragmentés et les formules ne sont pas analysées. DOC et XLS binaires ne sont pas pris en charge. CompressionStream et DecompressionStream deflate-raw sont requis. Vérifier les fichiers exportés dans les applications Office.

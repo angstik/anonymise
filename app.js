@@ -1,6 +1,6 @@
 
 const $ = id => document.getElementById(id);
-const state={source:'',name:'',encoding:'utf-8',bom:new Uint8Array(),newline:'LF',format:'TEXT',zones:[],selected:null,csvDelimiter:',',truncated:false};
+const state={source:'',name:'',encoding:'utf-8',bom:new Uint8Array(),newline:'LF',format:'TEXT',zones:[],selected:null,csvDelimiter:',',truncated:false,office:null};
 const CATEGORIES={credential:'Credential',email:'E-mail',phone:'Téléphone',ip:'Adresse IP',personal:'Information personnelle',other:'Autre donnée'};
 const SECRET=/(?:pass(?:word|phrase)?|pwd|secret|token|api[_-]?key|access[_-]?key|auth(?:orization)?|client[_-]?secret|private[_-]?key|bearer|credential|session[_-]?id|iban|ssn|social[_-]?security|num[eé]ro[_ -]?de[_ -]?s[eé]curit[eé]|nss)/i;
 const PERSONAL=/(?:e[-_]?mail|courriel|first[_-]?name|last[_-]?name|full[_-]?name|given[_-]?name|surname|pr[eé]nom|nom[_-]?de[_-]?famille|birth(?:day|date)?|date[_-]?de[_-]?naissance|address|adresse|postal|zip[_-]?code|t[eé]l[eé]phone|mobile|passport|passeport|national[_-]?id|tax[_-]?id|customer[_-]?id|user[_-]?id)/i;
@@ -87,7 +87,7 @@ function analyze(){
  const priority={credential:5,email:4,phone:3,ip:2,personal:1,other:0};
  candidates.sort((a,b)=>a.start-b.start||priority[b.type]-priority[a.type]||b.end-a.end);
  const accepted=[];for(const z of candidates){let intersects=false;for(const prev of accepted){if(prev.start<z.end&&prev.end>z.start){intersects=true;break}}if(!intersects)accepted.push(z)}
- state.zones=accepted.map((z,i)=>({...z,id:i+1}));state.selected=state.zones[0]?.id||null;render();
+ state.zones=accepted.map((z,i)=>({...z,id:i+1}));if(state.office)for(const z of state.zones){const sp=state.office.spans.find(s=>z.start>=s.start&&z.end<=s.end);if(sp)z.locator='part:'+sp.part+'#text['+(state.office.spans.indexOf(sp)+1)+']'}state.selected=state.zones[0]?.id||null;render();
 }
 function masked(value,type){
  let seed=0;for(let i=0;i<value.length;i++)seed=(Math.imul(seed,33)+value.charCodeAt(i))|0;
@@ -101,10 +101,10 @@ function report(){return {schema:'anonymise-report/v1',version:'1.0.0',file:stat
 function selectedZone(){return state.zones.find(z=>z.id===state.selected)}
 function render(){
  $('countAll').textContent=state.zones.length;$('countActive').textContent=state.zones.filter(z=>z.strategy!=='keep').length;$('countIgnored').textContent=state.zones.filter(z=>z.strategy==='keep').length;$('format').textContent=state.format;$('zonesBadge').textContent=state.zones.length;
- const query=$('search').value.toLowerCase();$('zones').replaceChildren();
- for(const z of state.zones){if(query&&!((CATEGORIES[z.type]||'')+' '+z.locator+' '+z.start).toLowerCase().includes(query))continue;
+ const query=$('search').value.toLowerCase();$('zones').replaceChildren();const groups=new Map();for(const z of state.zones){const key=z.type+'|'+z.locator.replace(/ \[row \d+\]$/,'').replace(/#text\[\d+\]$/,'#text[*]');if(!groups.has(key))groups.set(key,[]);groups.get(key).push(z)}
+ for(const group of groups.values()){const z=group[0];if(query&&!((CATEGORIES[z.type]||'')+' '+z.locator+' '+z.start).toLowerCase().includes(query))continue;
  const button=document.createElement('button');button.className='zone'+(z.id===state.selected?' selected':'')+(z.strategy==='keep'?' ignored':'');button.setAttribute('role','listitem');button.dataset.id=z.id;
- const name=document.createElement('div');name.className='label';const a=document.createElement('span');a.textContent=CATEGORIES[z.type]||z.type;const b=document.createElement('span');b.textContent='L'+lineAt(z.start);name.append(a,b);const path=document.createElement('span');path.className='path';path.textContent=z.locator;const sample=document.createElement('span');sample.className='sample';sample.textContent=replacement(z).slice(0,36);button.append(name,path,sample);button.onclick=()=>selectZone(z.id);$('zones').append(button)}
+ const name=document.createElement('div');name.className='label';const a=document.createElement('span');a.textContent=CATEGORIES[z.type]||z.type;const b=document.createElement('span');b.textContent=group.length>1?group.length+' occurrences':'L'+lineAt(z.start);name.append(a,b);const path=document.createElement('span');path.className='path';path.textContent=z.locator;const sample=document.createElement('span');sample.className='sample';sample.textContent=replacement(z).slice(0,36);button.append(name,path,sample);button.onclick=()=>{selectZone(z.id);$('groupActions').hidden=group.length<2;if(group.length>1){$('groupCount').textContent=group.length+' occurrences';$('groupApply').onclick=()=>{for(const q of group){q.strategy=$('strategy').value;q.type=$('category').value}render();toast('Groupe traité : '+group.length+' occurrences')};$('groupIgnore').onclick=()=>{for(const q of group)q.strategy='keep';render()}}};$('zones').append(button)}
  drawPreview();drawInspector();
 }
 function drawPreview(){
@@ -118,14 +118,14 @@ function drawPreview(){
  preview.querySelectorAll('[data-zone]').forEach(el=>el.onclick=()=>selectZone(Number(el.dataset.zone)));
  $('displayNotice').textContent=state.truncated?'Aperçu limité aux 350 000 premiers caractères · Export complet':'Vue source · Cliquez sur une zone pour l’inspecter';
 }
-function drawInspector(){const z=selectedZone();$('emptyInspector').hidden=!!z;$('inspectorContent').hidden=!z;if(!z){$('position').textContent='—';return}
+function drawInspector(){const z=selectedZone();if(!z)$('groupActions').hidden=true;$('emptyInspector').hidden=!!z;$('inspectorContent').hidden=!z;if(!z){$('position').textContent='—';return}
  $('category').value=z.type;$('locator').textContent=z.locator;$('range').textContent=z.start+' → '+z.end+' · longueur '+(z.end-z.start);$('original').textContent=state.source.slice(z.start,z.end);$('replacement').textContent=replacement(z);$('strategy').value=z.strategy;$('position').textContent='Ligne '+lineAt(z.start)+' · Zone '+z.id+'/'+state.zones.length;
 }
 function selectZone(id,scroll=true){state.selected=id;render();if(scroll){const highlighted=$('preview').querySelector('.mark.selected');if(highlighted)highlighted.scrollIntoView({block:'center',behavior:'smooth'});$('zones').querySelector('.zone.selected')?.scrollIntoView({block:'nearest'})}}
 function move(delta){const i=state.zones.findIndex(z=>z.id===state.selected);if(!state.zones.length)return;selectZone(state.zones[(i+delta+state.zones.length)%state.zones.length].id)}
 function switchView(manual){$('manual').hidden=!manual;$('preview').hidden=manual;$('viewOriginal').classList.toggle('view-on',manual);$('viewHighlights').classList.toggle('view-on',!manual)}
 function addManual(){const el=$('rawText'),start=el.selectionStart,end=el.selectionEnd;if(start===end){toast('Sélectionnez d’abord un passage dans le texte original.');return}if(state.zones.some(z=>z.start<end&&z.end>start)){toast('La sélection recoupe une zone existante. Modifiez ou supprimez-la d’abord.');return}
- const id=Math.max(0,...state.zones.map(z=>z.id))+1;state.zones.push({id,start,end,type:'other',locator:'range:'+start+'-'+end,confidence:'manual',origin:'manual',strategy:'mask'});state.zones.sort((a,b)=>a.start-b.start);switchView(false);selectZone(id);toast('Zone manuelle ajoutée.')}
+ const id=Math.max(0,...state.zones.map(z=>z.id))+1;let locator='range:'+start+'-'+end;if(state.office){const sp=state.office.spans.find(s=>start>=s.start&&end<=s.end);if(sp)locator='part:'+sp.part+'#text['+(state.office.spans.indexOf(sp)+1)+']'}else if(state.format==='CSV'){const lines=state.source.slice(0,start).split(/\r?\n/);const row=lines.length;const col=lines.at(-1).split(state.csvDelimiter).length-1;const head=state.source.split(/\r?\n/)[0].split(state.csvDelimiter);locator='column:'+(head[col]||col)+' [row '+row+']'}else if(state.format==='JSON'||state.format==='JSONL'){const m=[...state.source.slice(0,start).matchAll(/"((?:\\.|[^"\\])+)"\s*:\s*"/g)].pop();if(m)locator=jsonLocator(state.source,start,jsonQuoteDecode(m[1]))}else if(state.format==='XML'){const m=[...state.source.slice(0,start).matchAll(/<([\w:.-]+)(?:\s[^<>]*)?>/g)].pop();if(m)locator='//'+m[1]+'/text()'}state.zones.push({id,start,end,type:'other',locator,confidence:'manual',origin:'manual',strategy:'mask'});state.zones.sort((a,b)=>a.start-b.start);switchView(false);selectZone(id);toast('Zone manuelle ajoutée.')}
 function attachEvents(){
  $('drop').onclick=()=>$('file').click();$('drop').onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();$('file').click()}};
  $('drop').ondragover=e=>{e.preventDefault();$('drop').classList.add('dragging')};$('drop').ondragleave=()=>$('drop').classList.remove('dragging');
@@ -137,15 +137,15 @@ function attachEvents(){
  $('removeZone').onclick=()=>{const z=selectedZone();if(!z)return;state.zones=state.zones.filter(p=>p.id!==z.id);state.selected=state.zones[0]?.id||null;render();toast('Annotation supprimée. Le texte original est intact.')};
  $('viewHighlights').onclick=()=>switchView(false);$('viewOriginal').onclick=()=>switchView(true);$('addSelection').onclick=addManual;
  $('reanalyze').onclick=()=>{if(confirm('Réanalyser le document ? Les corrections manuelles seront perdues.'))analyze()};
- $('exportFile').onclick=()=>{try{const text=sanitize();download(state.name.replace(/(\.[^.]+)?$/,'-anonymise$1'),encodeText(text),'application/octet-stream');toast('Copie anonymisée exportée.')}catch(e){toast(e.message)}};
+ $('exportFile').onclick=async()=>{try{if(state.office){const blob=await exportOffice(state.office,state.zones,masked);download(state.name.replace(/(\.[^.]+)?$/,'-anonymise$1'),blob,'application/octet-stream')}else{const text=sanitize();download(state.name.replace(/(\.[^.]+)?$/,'-anonymise$1'),encodeText(text),'application/octet-stream')}toast('Copie anonymisée exportée.')}catch(e){toast(e.message)}};
  $('exportReport').onclick=()=>{download(state.name+'-zones.json',new TextEncoder().encode(JSON.stringify(report(),null,2)),'application/json');toast('Rapport JSON exporté (sans valeurs originales).')};
  window.addEventListener('keydown',e=>{if(e.target.matches('input,textarea,select'))return;if(e.key==='ArrowDown'&&state.source){e.preventDefault();move(1)}if(e.key==='ArrowUp'&&state.source){e.preventDefault();move(-1)}});
 }
 async function loadFile(file){
  if(file.size>30*1024*1024&&!confirm('Ce fichier dépasse 30 Mo. L’analyse peut être lente. Continuer ?'))return;
- try{const bytes=new Uint8Array(await file.arrayBuffer());const result=readEncoding(bytes);
+ try{const bytes=new Uint8Array(await file.arrayBuffer());const officeFormat=/\.(docx|xlsx)$/i.exec(file.name)?.[1]?.toUpperCase();const office=officeFormat?await transformZip(bytes,officeFormat):null;const result=office?{content:office.source,encoding:'utf-8',bom:new Uint8Array()}:readEncoding(bytes);state.office=office;
  if(result.content.includes('\u0000')){toast('Fichier contenant des octets NUL : vérifiez qu’il s’agit bien d’un texte.')}
- state.source=result.content;state.name=file.name;state.encoding=result.encoding;state.bom=result.bom;state.format=detectFormat(file.name,result.content);
+ state.source=result.content;state.name=file.name;state.encoding=result.encoding;state.bom=result.bom;state.format=officeFormat||detectFormat(file.name,result.content);
  state.newline=result.content.includes('\r\n')?'CRLF':result.content.includes('\r')?'CR':'LF';
  $('filename').textContent=file.name;$('filemeta').textContent=(file.size/1024).toFixed(1)+' Ko · '+result.encoding.toUpperCase()+(result.bom.length?' avec BOM':'')+' · '+state.newline;
  $('workspace').hidden=false;$('search').value='';$('rawText').value=result.content;$('preview').scrollTop=0;switchView(false);analyze();$('workspace').scrollIntoView({behavior:'smooth',block:'start'});toast(state.zones.length+' zone(s) détectée(s). Vérifiez les résultats avant export.');

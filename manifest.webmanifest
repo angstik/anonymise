@@ -7,8 +7,8 @@
   "start_url": "/anonymise/",
   "scope": "/anonymise/",
   "display": "standalone",
-  "background_color": "#f4f6f8",
-  "theme_color": "#121b2b",
+  "background_color": "#f7faff",
+  "theme_color": "#153e83",
   "icons": [
     {
       "src": "/anonymise/icons/icon.svg",
