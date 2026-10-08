@@ -1,3 +1,8 @@
+2026-10-08 — v1.3.1
+- Analyse structurelle JSON avec chemins et indices de tableaux exacts, scanner CSV tenant compte des champs entre guillemets et retours à la ligne.
+- Sélection manuelle répétée basée sur les chemins JSON/colonnes CSV, exclusion explicite pour une annotation retirée.
+- Actualisation du cache PWA et chargement du moteur structurel.
+
 2026-10-08 — v1.3.0
 - Interface responsive sans défilement horizontal, colonnes empilées sur mobile.
 - Sel aléatoire prérempli et modifiable, requis à l’ouverture ; pseudonymisation déterministe dépendante du sel.

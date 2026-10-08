@@ -29,6 +29,7 @@ jobs:
           test -f icons/icon-512.png
           node --check app.js
           node --check sw.js
+          node --check structure.js
           node --check engine.js
           node --check office.js
           node --test tests/*.test.cjs

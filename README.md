@@ -23,3 +23,6 @@ DOCX et XLSX sont lus et écrits localement via ZIP/OOXML. Les textes Word, les 
 
 ## v1.2
 Détection et anonymisation automatiques; correction manuelle possible. Pseudonymisation déterministe locale non cryptographique. La propagation manuelle cible les valeurs identiques dans les éléments structurels repérés. Les chemins restent heuristiques pour certains formats complexes.
+
+## v1.3
+Un sel aléatoire prérempli, modifiable et non sauvegardé est demandé à l’ouverture; sauvegardez-le séparément pour reproduire les substitutions. La pseudonymisation demeure non cryptographique. L'export demande confirmation et compte les règles et occurrences marquées « conserver ». En JSON, les chemins et indices de tableaux sont analysés avec offsets source. En CSV, les champs échappés et les sauts de ligne entre guillemets sont analysés. Certaines transformations peuvent violer des contraintes de schéma, nécessitant vérification.
