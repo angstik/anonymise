@@ -1,3 +1,10 @@
+2026-10-08 — v1.3.0
+- Interface responsive sans défilement horizontal, colonnes empilées sur mobile.
+- Sel aléatoire prérempli et modifiable, requis à l’ouverture ; pseudonymisation déterministe dépendante du sel.
+- Confirmation des exports avec nombre de patterns et occurrences explicitement exclus.
+- Extension des heuristiques de noms, prénoms et adresses en champs structurés.
+- Tests de stabilité et de sensibilité au sel.
+
 2026-10-08 — v1.2.0
 - Pseudonymisation stable et reproductible des mêmes valeurs et types.
 - Regroupement des zones par contexte de données et chemin structurel.

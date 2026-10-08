@@ -3,8 +3,11 @@
 'use strict';
 const alphabet='abcdefghjkmnpqrstuvwxyz';
 function hash(s){let h=2166136261;for(let i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619)}return h>>>0}
+let salt='';
+function setSalt(value){salt=String(value||'')}
+function getSalt(){return salt}
 function pseudonym(value,type='other'){
- const seed=hash(type+'\u0000'+value);
+ const seed=hash(salt+'\u0000'+type+'\u0000'+value);
  let out='',k=0;
  for(const c of value){
   let n=hash(seed+':'+k++);
@@ -38,7 +41,7 @@ function sameOccurrences(source,value,positions,existing){
  const found=[];for(const p of positions){if(p.end-p.start<value.length)continue;let pos=p.start;while((pos=source.indexOf(value,pos))!==-1&&pos+value.length<=p.end){const end=pos+value.length;if(!existing.some(z=>z.start<end&&z.end>pos))found.push({start:pos,end,locator:p.locator});pos=end}}
  return found;
 }
-const api={pseudonym,normalPath,context,groups,sameOccurrences};
+const api={pseudonym,normalPath,context,groups,sameOccurrences,setSalt,getSalt};
 if(typeof module!=='undefined'&&module.exports)module.exports=api;
 root.AnonymiseEngine=api;
 })(typeof globalThis!=='undefined'?globalThis:this);

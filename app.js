@@ -3,7 +3,7 @@ const $ = id => document.getElementById(id);
 const state={source:'',name:'',encoding:'utf-8',bom:new Uint8Array(),newline:'LF',format:'TEXT',zones:[],selected:null,csvDelimiter:',',truncated:false,office:null};
 const CATEGORIES={credential:'Credential',email:'E-mail',phone:'Téléphone',ip:'Adresse IP',personal:'Information personnelle',other:'Autre donnée'};
 const SECRET=/(?:pass(?:word|phrase)?|pwd|secret|token|api[_-]?key|access[_-]?key|auth(?:orization)?|client[_-]?secret|private[_-]?key|bearer|credential|session[_-]?id|iban|ssn|social[_-]?security|num[eé]ro[_ -]?de[_ -]?s[eé]curit[eé]|nss)/i;
-const PERSONAL=/(?:e[-_]?mail|courriel|first[_-]?name|last[_-]?name|full[_-]?name|given[_-]?name|surname|pr[eé]nom|nom[_-]?de[_-]?famille|birth(?:day|date)?|date[_-]?de[_-]?naissance|address|adresse|postal|zip[_-]?code|t[eé]l[eé]phone|mobile|passport|passeport|national[_-]?id|tax[_-]?id|customer[_-]?id|user[_-]?id)/i;
+const PERSONAL=/(?:e[-_]?mail|courriel|first[_-]?name|last[_-]?name|full[_-]?name|given[_-]?name|surname|pr[eé]nom|nom[_-]?de[_-]?famille|birth(?:day|date)?|date[_-]?de[_-]?naissance|address|adresse|postal|zip[_-]?code|t[eé]l[eé]phone|mobile|passport|passeport|national[_-]?id|tax[_-]?id|customer[_-]?id|user[_-]?id|city|ville|street|rue|firstname|lastname|nom|name|zipcode|code[_-]?postal|dob)/i;
 const ruleSets=[
  {type:'credential',regex:/\b(?:AKIA|ASIA)[A-Z0-9]{16}\b/g},
  {type:'credential',regex:/\bgh[pousr]_[A-Za-z0-9_]{20,}\b/g},
@@ -99,6 +99,8 @@ function replacement(z){const raw=state.source.slice(z.start,z.end);if(z.strateg
 function sanitize(){let result=state.source;for(const z of state.zones.filter(z=>z.strategy!=='keep').sort((a,b)=>b.start-a.start))result=result.slice(0,z.start)+replacement(z)+result.slice(z.end);return result}
 function download(name,bytes,mime){const url=URL.createObjectURL(new Blob([bytes],{type:mime}));const a=document.createElement('a');a.href=url;a.download=name;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000)}
 function report(){return {schema:'anonymise-report/v1',version:'1.0.0',file:state.name,format:state.format,encoding:state.encoding,bom:Array.from(state.bom),sourceLength:state.source.length,generatedAt:new Date().toISOString(),offsetUnit:'UTF-16 code units',zones:state.zones.map(z=>({id:z.id,category:z.type,start:z.start,end:z.end,line:lineAt(z.start),locator:z.locator,locatorKind:z.locator.split(':')[0],strategy:z.strategy,applied:z.strategy!=='keep',origin:z.origin,confidence:z.confidence}))}}
+function excludedSummary(){const ignored=state.zones.filter(z=>z.strategy==='keep');return {patterns:new Set(ignored.map(z=>AnonymiseEngine.context(z))).size,occurrences:ignored.length}}
+function confirmExport(){const s=excludedSummary();return window.confirm('Exporter le document anonymisé ?\n\n'+s.patterns+' pattern(s), '+s.occurrences+' occurrence(s) explicitement exclue(s) du traitement.\nToutes les autres zones identifiées seront transformées.\n\nContinuer ?')}
 function selectedZone(){return state.zones.find(z=>z.id===state.selected)}
 function render(){
  $('countAll').textContent=state.zones.length;$('countActive').textContent=state.zones.filter(z=>z.strategy!=='keep').length;$('countIgnored').textContent=state.zones.filter(z=>z.strategy==='keep').length;$('format').textContent=state.format;$('zonesBadge').textContent=state.zones.length;
@@ -129,7 +131,7 @@ function manualSegments(locator,start,end){const text=state.source;const segment
 function addManual(){const el=$('rawText'),start=el.selectionStart,end=el.selectionEnd;if(start===end){toast('Sélectionnez d’abord un passage dans le texte original.');return}if(state.zones.some(z=>z.start<end&&z.end>start)){toast('La sélection recoupe une zone existante. Modifiez ou supprimez-la d’abord.');return}
  const id=Math.max(0,...state.zones.map(z=>z.id))+1;let locator='range:'+start+'-'+end;if(state.office){const sp=state.office.spans.find(s=>start>=s.start&&end<=s.end);if(sp)locator='part:'+sp.part+'#text['+(state.office.spans.indexOf(sp)+1)+']'}else if(state.format==='CSV'){const lines=state.source.slice(0,start).split(/\r?\n/);const row=lines.length;const col=lines.at(-1).split(state.csvDelimiter).length-1;const head=state.source.split(/\r?\n/)[0].split(state.csvDelimiter);locator='column:'+(head[col]||col)+' [row '+row+']'}else if(state.format==='JSON'||state.format==='JSONL'){const m=[...state.source.slice(0,start).matchAll(/"((?:\\.|[^"\\])+)"\s*:\s*"/g)].pop();if(m)locator=jsonLocator(state.source,start,jsonQuoteDecode(m[1]))}else if(state.format==='XML'){const m=[...state.source.slice(0,start).matchAll(/<([\w:.-]+)(?:\s[^<>]*)?>/g)].pop();if(m)locator='//'+m[1]+'/text()'}const fresh=[{id,start,end,type:'other',locator,confidence:'manual',origin:'manual',strategy:'mask'}];if(['CSV','JSON','JSONL','XML','DOCX','XLSX'].includes(state.format)&&$('allIdentical').checked){const value=state.source.slice(start,end);const segments=manualSegments(locator,start,end);const found=AnonymiseEngine.sameOccurrences(state.source,value,segments,state.zones);let next=id+1;for(const p of found){if(p.start!==start)fresh.push({id:next++,start:p.start,end:p.end,type:'other',locator:p.locator,confidence:'manual',origin:'manual',strategy:'mask'})}}state.zones.push(...fresh);state.zones.sort((a,b)=>a.start-b.start);switchView(false);selectZone(id);toast(fresh.length+' occurrence(s) ajoutée(s).')}
 function attachEvents(){
- $('drop').onclick=()=>$('file').click();$('drop').onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();$('file').click()}};
+ $('saltOpen').onclick=()=>showSalt(true);$('saltSave').onclick=saveSalt;$('saltInput').onkeydown=ev=>{if(ev.key==='Enter')saveSalt()};$('drop').onclick=()=>$('file').click();$('drop').onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();$('file').click()}};
  $('drop').ondragover=e=>{e.preventDefault();$('drop').classList.add('dragging')};$('drop').ondragleave=()=>$('drop').classList.remove('dragging');
  $('drop').ondrop=e=>{e.preventDefault();$('drop').classList.remove('dragging');const file=e.dataTransfer.files[0];if(file)loadFile(file)};
  $('file').onchange=e=>{if(e.target.files[0])loadFile(e.target.files[0]);e.target.value=''};
@@ -139,8 +141,8 @@ function attachEvents(){
  $('removeZone').onclick=()=>{const z=selectedZone();if(!z)return;state.zones=state.zones.filter(p=>p.id!==z.id);state.selected=state.zones[0]?.id||null;render();toast('Annotation supprimée. Le texte original est intact.')};
  $('viewHighlights').onclick=()=>switchView(false);$('viewOriginal').onclick=()=>switchView(true);$('addSelection').onclick=addManual;
  $('reanalyze').onclick=()=>{if(confirm('Réanalyser le document ? Les corrections manuelles seront perdues.'))analyze()};
- $('exportFile').onclick=async()=>{try{if(state.office){const blob=await exportOffice(state.office,state.zones,masked);download(state.name.replace(/(\.[^.]+)?$/,'-anonymise$1'),blob,'application/octet-stream')}else{const text=sanitize();download(state.name.replace(/(\.[^.]+)?$/,'-anonymise$1'),encodeText(text),'application/octet-stream')}toast('Copie anonymisée exportée.')}catch(e){toast(e.message)}};
- $('exportReport').onclick=()=>{download(state.name+'-zones.json',new TextEncoder().encode(JSON.stringify(report(),null,2)),'application/json');toast('Rapport JSON exporté (sans valeurs originales).')};
+ $('exportFile').onclick=async()=>{if(!confirmExport())return;try{if(state.office){const blob=await exportOffice(state.office,state.zones,masked);download(state.name.replace(/(\.[^.]+)?$/,'-anonymise$1'),blob,'application/octet-stream')}else{const text=sanitize();download(state.name.replace(/(\.[^.]+)?$/,'-anonymise$1'),encodeText(text),'application/octet-stream')}toast('Copie anonymisée exportée.')}catch(e){toast(e.message)}};
+ $('exportReport').onclick=()=>{if(!confirmExport())return;download(state.name+'-zones.json',new TextEncoder().encode(JSON.stringify(report(),null,2)),'application/json');toast('Rapport JSON exporté (sans valeurs originales).')};
  window.addEventListener('keydown',e=>{if(e.target.matches('input,textarea,select'))return;if(e.key==='ArrowDown'&&state.source){e.preventDefault();move(1)}if(e.key==='ArrowUp'&&state.source){e.preventDefault();move(-1)}});
 }
 async function loadFile(file){
@@ -153,7 +155,10 @@ async function loadFile(file){
  $('workspace').hidden=false;$('search').value='';$('rawText').value=result.content;$('preview').scrollTop=0;switchView(false);analyze();$('workspace').scrollIntoView({behavior:'smooth',block:'start'});toast(state.zones.length+' zone(s) détectée(s). Vérifiez les résultats avant export.');
  }catch(e){toast('Lecture impossible : '+e.message);console.error(e)}
 }
-attachEvents();
+function randomSalt(){const data=new Uint8Array(16);crypto.getRandomValues(data);return Array.from(data,x=>x.toString(16).padStart(2,'0')).join('')}
+function showSalt(edit=false){if(!edit||!$('saltInput').value)$('saltInput').value=randomSalt();$('saltDialog').hidden=false;$('saltInput').focus()}
+function saveSalt(){const v=$('saltInput').value.trim();if(!v){toast('Saisissez un sel non vide.');return}AnonymiseEngine.setSalt(v);$('saltDialog').hidden=true;$('saltStatus').textContent='Sel configuré';if(state.source)render();toast('Sel mis à jour : les remplacements déterministes sont recalculés. Conservez ce sel pour reproduire les mêmes résultats.')}
+attachEvents();showSalt();
 let deferredInstall;window.addEventListener('beforeinstallprompt',event=>{event.preventDefault();deferredInstall=event;$('install').hidden=false});
 $('install').onclick=async()=>{if(!deferredInstall)return;deferredInstall.prompt();await deferredInstall.userChoice;deferredInstall=null;$('install').hidden=true};
 if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js',{scope:'./'}).catch(err=>console.warn('Service worker non disponible',err)));
