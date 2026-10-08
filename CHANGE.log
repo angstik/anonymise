@@ -1,3 +1,7 @@
+2026-10-08 — v1.3.2
+- Correction de la propagation manuelle DOCX/XLSX aux textes équivalents dans la même partie Office.
+- Cache PWA actualisé après les derniers correctifs.
+
 2026-10-08 — v1.3.1
 - Analyse structurelle JSON avec chemins et indices de tableaux exacts, scanner CSV tenant compte des champs entre guillemets et retours à la ligne.
 - Sélection manuelle répétée basée sur les chemins JSON/colonnes CSV, exclusion explicite pour une annotation retirée.
