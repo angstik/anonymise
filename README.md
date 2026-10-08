@@ -20,3 +20,6 @@ Aucune licence spécifiée.
 
 ## Office v1.1
 DOCX et XLSX sont lus et écrits localement via ZIP/OOXML. Les textes Word, les cellules des feuilles Excel et les chaînes partagées sont analysés. Les segments XML peuvent être fragmentés et les formules ne sont pas analysées. DOC et XLS binaires ne sont pas pris en charge. CompressionStream et DecompressionStream deflate-raw sont requis. Vérifier les fichiers exportés dans les applications Office.
+
+## v1.2
+Détection et anonymisation automatiques; correction manuelle possible. Pseudonymisation déterministe locale non cryptographique. La propagation manuelle cible les valeurs identiques dans les éléments structurels repérés. Les chemins restent heuristiques pour certains formats complexes.

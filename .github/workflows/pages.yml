@@ -29,6 +29,9 @@ jobs:
           test -f icons/icon-512.png
           node --check app.js
           node --check sw.js
+          node --check engine.js
+          node --check office.js
+          node --test tests/*.test.cjs
           node -e "const m=JSON.parse(require('fs').readFileSync('manifest.webmanifest','utf8')); if(m.start_url!=='/anonymise/'||m.scope!=='/anonymise/')process.exit(1)"
       - name: Setup Pages
         uses: actions/configure-pages@v5

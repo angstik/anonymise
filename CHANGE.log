@@ -1,3 +1,10 @@
+2026-10-08 — v1.2.0
+- Pseudonymisation stable et reproductible des mêmes valeurs et types.
+- Regroupement des zones par contexte de données et chemin structurel.
+- Validation automatique avec exceptions manuelles.
+- Extension optionnelle des sélections manuelles aux occurrences identiques dans la même structure.
+- Tests du moteur, cache PWA actualisé.
+
 2026-10-08 — v1.1.1
 - Correctif critique : restauration des icônes PWA, du workflow GitHub Pages et de .nojekyll supprimés du commit 1.1.
 - Nouveau cache Service Worker pour renouveler les assets lors de la mise à jour.
