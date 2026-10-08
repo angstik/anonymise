@@ -1,3 +1,7 @@
+2026-10-08 — v1.1.1
+- Correctif critique : restauration des icônes PWA, du workflow GitHub Pages et de .nojekyll supprimés du commit 1.1.
+- Nouveau cache Service Worker pour renouveler les assets lors de la mise à jour.
+
 2026-10-08 — v1.1.0
 - DOCX et XLSX : inspection des textes OOXML et export des archives adaptées.
 - Regroupement des zones répétitives par règle/chemin et application par lot.
