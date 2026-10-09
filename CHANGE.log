@@ -1,3 +1,7 @@
+2026-10-09 — v1.4.1
+- Détection heuristique de la présence d’un en-tête Excel ; feuilles sans titre affichées avec les lettres de colonnes et première ligne conservée comme donnée.
+- Rafraîchissement de la PWA.
+
 2026-10-09 — v1.4.0
 - XLSX : restitution par feuilles, lignes, colonnes et cellules, en-têtes visibles, colonnes cliquables et pagination.
 - Analyse par noms de colonnes Excel et regroupement par feuille/colonne; propagation manuelle limitée à la colonne concernée.
