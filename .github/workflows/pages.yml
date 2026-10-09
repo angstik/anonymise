@@ -32,6 +32,7 @@ jobs:
           node --check structure.js
           node --check engine.js
           node --check office.js
+          node --check xlsx.js
           node --test tests/*.test.cjs
           node -e "const m=JSON.parse(require('fs').readFileSync('manifest.webmanifest','utf8')); if(m.start_url!=='/anonymise/'||m.scope!=='/anonymise/')process.exit(1)"
       - name: Setup Pages
