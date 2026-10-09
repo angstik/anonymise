@@ -26,3 +26,6 @@ Détection et anonymisation automatiques; correction manuelle possible. Pseudony
 
 ## v1.3
 Un sel aléatoire prérempli, modifiable et non sauvegardé est demandé à l’ouverture; sauvegardez-le séparément pour reproduire les substitutions. La pseudonymisation demeure non cryptographique. L'export demande confirmation et compte les règles et occurrences marquées « conserver ». En JSON, les chemins et indices de tableaux sont analysés avec offsets source. En CSV, les champs échappés et les sauts de ligne entre guillemets sont analysés. Certaines transformations peuvent violer des contraintes de schéma, nécessitant vérification.
+
+## XLSX v1.4
+Les feuilles XLSX sont affichées comme tableaux (colonnes, en-têtes de la première ligne renseignée et références de cellules). Les groupes d’anonymisation s’appliquent par feuille et colonne; sélectionner une cellule peut révéler sa zone. Les cellules de formules ne sont pas modifiées et certaines particularités OOXML restent non couvertes (tables pivot, dates de nombres formatés, contenus liés). Lors d’un export, seule la cellule modifiée est réécrite; une chaîne partagée utilisée par plusieurs cellules n’est pas modifiée globalement. Le bouton Fermer le fichier libère les données du document courant.
