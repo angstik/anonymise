@@ -27,11 +27,14 @@ function build(parts){
  const sheets=parts.filter(p=>/^xl\/worksheets\/sheet\d+\.xml$/.test(p.name)).sort((a,b)=>Number(a.name.match(/sheet(\d+)/)[1])-Number(b.name.match(/sheet(\d+)/)[1]));
  const result={source:'',spans:[],sheets:[],cells:[]};
  for(const part of sheets){
-  const cells=sheetCells(part,strings),first=Math.min(...cells.map(c=>c.row)),headers=new Map(cells.filter(c=>c.row===first).map(c=>[c.col,c.value]));
+  const cells=sheetCells(part,strings),first=Math.min(...cells.map(c=>c.row)),top=cells.filter(c=>c.row===first);
+  const headerWords=/^(?:name|nom|pr[eé]nom|firstname|lastname|email|e-mail|mail|adresse|address|city|ville|postal|zip|phone|t[eé]l[eé]phone|password|token|secret|key|identifiant|id|date|amount|montant|client|customer|compte|iban|age|genre|sexe|pays|country|status|statut|description|libell[eé])$/i;
+  const isHeader=top.length>0&&top.every(c=>!/^\d+(?:[.,]\d+)?$/.test(c.value))&&new Set(top.map(c=>c.value.trim().toLowerCase())).size===top.length&&(top.some(c=>headerWords.test(c.value.trim()))||cells.some(c=>c.row>first&&top.some(t=>{const next=cells.find(x=>x.row===c.row&&x.col===t.col);return next&&/^\d+(?:[.,]\d+)?$/.test(next.value)})));
+  const headers=new Map(isHeader?top.map(c=>[c.col,c.value]):[]);
   const byRow=new Map();
   for(const cell of cells){
    cell.header=headers.get(cell.col)||colName(cell.col);
-   cell.isHeader=cell.row===first;
+   cell.isHeader=isHeader&&cell.row===first;
    cell.locator='sheet:'+part.name+'|column:'+colName(cell.col)+'|header:'+cell.header+'|cell:'+cell.ref;
    cell.start=result.source.length;result.source+=cell.value;cell.end=result.source.length;result.source+='\n';
    result.spans.push({start:cell.start,end:cell.end,part:part.name,cell,locator:cell.locator});
