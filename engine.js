@@ -25,7 +25,7 @@ function pseudonym(value,type='other'){
  return out;
 }
 function normalPath(path){
- return path.replace(/\s*\[row\s+\d+\]/gi,'').replace(/#text\[\d+\]/g,'#text[*]').replace(/\[\d+\]/g,'[*]');
+ return path.replace(/\|cell:[A-Z]+\d+/g,'').replace(/\s*\[row\s+\d+\]/gi,'').replace(/#text\[\d+\]/g,'#text[*]').replace(/\[\d+\]/g,'[*]');
 }
 function context(zone){
  const loc=zone.locator||'';
