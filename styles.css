@@ -32,3 +32,5 @@ html,body{max-width:100%;overflow-x:hidden}main{width:100%;max-width:1540px}butt
 .excel-table td:before{content:attr(data-label);display:block;font-size:11px;font-weight:750;color:#174687;margin-bottom:3px}
 .excel-pages button{white-space:normal}
 }
+
+.table-controls{padding:9px;background:#f2f6fd}.table-controls label{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.table-controls select,.salt-card select{background:#fff;border:1px solid #b7c7de;border-radius:7px;padding:8px}

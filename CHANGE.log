@@ -1,3 +1,8 @@
+2026-10-09 — v1.5.0
+- Choix de la ligne d’en-têtes ou absence de titre sur les feuilles Excel et CSV.
+- Vue CSV tabulaire, adaptée au PC et au mobile.
+- Actions par colonne sur toutes les cellules ou les détections, filtrables par lignes et traitement.
+
 2026-10-09 — v1.4.1
 - Détection heuristique de la présence d’un en-tête Excel ; feuilles sans titre affichées avec les lettres de colonnes et première ligne conservée comme donnée.
 - Rafraîchissement de la PWA.

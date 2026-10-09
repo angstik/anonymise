@@ -21,7 +21,7 @@ function sheetCells(part,strings){
  }
  return result;
 }
-function build(parts){
+function build(parts,overrides={}){
  const shared=parts.find(p=>p.name==='xl/sharedStrings.xml');
  const strings=shared?sharedStrings(shared.xml||new TextDecoder().decode(shared.content)):[];
  const sheets=parts.filter(p=>/^xl\/worksheets\/sheet\d+\.xml$/.test(p.name)).sort((a,b)=>Number(a.name.match(/sheet(\d+)/)[1])-Number(b.name.match(/sheet(\d+)/)[1]));
@@ -30,11 +30,11 @@ function build(parts){
   const cells=sheetCells(part,strings),first=Math.min(...cells.map(c=>c.row)),top=cells.filter(c=>c.row===first);
   const headerWords=/^(?:name|nom|pr[eé]nom|firstname|lastname|email|e-mail|mail|adresse|address|city|ville|postal|zip|phone|t[eé]l[eé]phone|password|token|secret|key|identifiant|id|date|amount|montant|client|customer|compte|iban|age|genre|sexe|pays|country|status|statut|description|libell[eé])$/i;
   const isHeader=top.length>0&&top.every(c=>!/^\d+(?:[.,]\d+)?$/.test(c.value))&&new Set(top.map(c=>c.value.trim().toLowerCase())).size===top.length&&(top.some(c=>headerWords.test(c.value.trim()))||cells.some(c=>c.row>first&&top.some(t=>{const next=cells.find(x=>x.row===c.row&&x.col===t.col);return next&&/^\d+(?:[.,]\d+)?$/.test(next.value)})));
-  const headers=new Map(isHeader?top.map(c=>[c.col,c.value]):[]);
+  const headerRow=Object.hasOwn(overrides,part.name)?Number(overrides[part.name]):(isHeader?first:0);const headers=new Map(headerRow?cells.filter(c=>c.row===headerRow).map(c=>[c.col,c.value]):[]);
   const byRow=new Map();
   for(const cell of cells){
    cell.header=headers.get(cell.col)||colName(cell.col);
-   cell.isHeader=isHeader&&cell.row===first;
+   cell.isHeader=headerRow>0&&cell.row===headerRow;
    cell.locator='sheet:'+part.name+'|column:'+colName(cell.col)+'|header:'+cell.header+'|cell:'+cell.ref;
    cell.start=result.source.length;result.source+=cell.value;cell.end=result.source.length;result.source+='\n';
    result.spans.push({start:cell.start,end:cell.end,part:part.name,cell,locator:cell.locator});
@@ -42,7 +42,7 @@ function build(parts){
    if(!byRow.has(cell.row))byRow.set(cell.row,[]);
    byRow.get(cell.row).push(cell);
   }
-  result.sheets.push({name:part.name.match(/sheet\d+/)[0],part:part.name,headers:[...headers.entries()].sort((a,b)=>a[0]-b[0]).map(([col,label])=>({col,letter:colName(col),label})),rows:[...byRow.entries()].sort((a,b)=>a[0]-b[0]).map(([number,cells])=>({number,cells}))});
+  result.sheets.push({headerRow,name:part.name.match(/sheet\d+/)[0],part:part.name,headers:[...headers.entries()].sort((a,b)=>a[0]-b[0]).map(([col,label])=>({col,letter:colName(col),label})),rows:[...byRow.entries()].sort((a,b)=>a[0]-b[0]).map(([number,cells])=>({number,cells}))});
  }
  return result;
 }

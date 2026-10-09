@@ -1,6 +1,6 @@
 
 const $ = id => document.getElementById(id);
-const state={source:'',name:'',encoding:'utf-8',bom:new Uint8Array(),newline:'LF',format:'TEXT',zones:[],selected:null,csvDelimiter:',',truncated:false,office:null,xlsxSheet:0,xlsxPage:0};
+const state={source:'',name:'',encoding:'utf-8',bom:new Uint8Array(),newline:'LF',format:'TEXT',zones:[],selected:null,csvDelimiter:',',truncated:false,office:null,xlsxSheet:0,xlsxPage:0,headerOverrides:{},csvHeaderRow:1};
 const CATEGORIES={credential:'Credential',email:'E-mail',phone:'Téléphone',ip:'Adresse IP',personal:'Information personnelle',other:'Autre donnée'};
 const SECRET=/(?:pass(?:word|phrase)?|pwd|secret|token|api[_-]?key|access[_-]?key|auth(?:orization)?|client[_-]?secret|private[_-]?key|bearer|credential|session[_-]?id|iban|ssn|social[_-]?security|num[eé]ro[_ -]?de[_ -]?s[eé]curit[eé]|nss)/i;
 const PERSONAL=/(?:e[-_]?mail|courriel|first[_-]?name|last[_-]?name|full[_-]?name|given[_-]?name|surname|pr[eé]nom|nom[_-]?de[_-]?famille|birth(?:day|date)?|date[_-]?de[_-]?naissance|address|adresse|postal|zip[_-]?code|t[eé]l[eé]phone|mobile|passport|passeport|national[_-]?id|tax[_-]?id|customer[_-]?id|user[_-]?id|city|ville|street|rue|firstname|lastname|nom|name|zipcode|code[_-]?postal|dob)/i;
@@ -67,8 +67,8 @@ function scanStructure(out){
   for(const cell of state.office?.cells||[]){if(cell.isHeader)continue;const name=cell.header;const type=SECRET.test(name)?'credential':PERSONAL.test(name)?'personal':null;if(type)addCandidate(out,cell.start,cell.end,type,cell.locator,'column')}
  }else if(fmt==='CSV'){
   const d=state.csvDelimiter=sniffDelimiter(text),rows=AnonymiseStructure.csv(text,d);state.csvRows=rows;
-  const header=rows[0]||[];
-  for(let r=1;r<rows.length;r++)for(let c=0;c<rows[r].length;c++){const key=header[c]?.value||'';const type=SECRET.test(key)?'credential':PERSONAL.test(key)?'personal':null;if(type)addCandidate(out,rows[r][c].start,rows[r][c].end,type,'column:'+key+' [row '+(r+1)+']','column')}
+  const header=rows[state.csvHeaderRow-1]||[];
+  for(let r=0;r<rows.length;r++)for(let c=0;c<rows[r].length;c++){if(r===state.csvHeaderRow-1)continue;const key=header[c]?.value||'';const type=SECRET.test(key)?'credential':PERSONAL.test(key)?'personal':null;if(type)addCandidate(out,rows[r][c].start,rows[r][c].end,type,'column:'+key+' [row '+(r+1)+']','column')}
  }
 }
 function scanGeneric(out){
@@ -107,6 +107,7 @@ function render(){
  drawPreview();drawInspector();
 }
 function drawPreview(){
+ if(state.format==='CSV'){drawCsvPreview();return}
  if(state.format==='XLSX'&&state.office?.sheets){drawExcelPreview();return}
  const text=state.source,preview=$('preview'),limit=350000;
  state.truncated=text.length>limit;const clipped=text.slice(0,limit);
@@ -118,6 +119,18 @@ function drawPreview(){
  preview.querySelectorAll('[data-zone]').forEach(el=>el.onclick=()=>selectZone(Number(el.dataset.zone)));
  $('displayNotice').textContent=state.truncated?'Aperçu limité aux 350 000 premiers caractères · Export complet':'Vue source · Cliquez sur une zone pour l’inspecter';
 }
+function openColumnAction(part,col){state.columnAction={part,col};$('columnTitle').textContent='Colonne '+AnonymiseXlsx.colName(col);$('columnFrom').value='';$('columnTo').value='';$('columnDialog').hidden=false}
+function applyColumnAction(){const {part,col}=state.columnAction||{};if(col===undefined)return;const mode=$('columnMode').value,action=$('columnStrategy').value,from=Number($('columnFrom').value)||1,to=Number($('columnTo').value)||Infinity;
+const cells=state.format==='XLSX'?state.office.cells.filter(c=>c.part===part&&c.col===col&&!c.isHeader).map(c=>({...c,number:c.row})):state.csvRows.flatMap((row,i)=>i===state.csvHeaderRow-1?[]:row[col]?[{...row[col],number:i+1,locator:'column:'+(state.csvRows[state.csvHeaderRow-1]?.[col]?.value||AnonymiseXlsx.colName(col))+' [row '+(i+1)+']'}]:[]);
+let count=0;for(const c of cells){if(c.number<from||c.number>to||c.start===c.end)continue;const found=state.zones.filter(z=>z.start<c.end&&z.end>c.start);if(mode==='detected'&&!found.length)continue;if(found.length){for(const z of found){z.strategy=action;count++}}else if(action!=='keep'){state.zones.push({id:Math.max(0,...state.zones.map(z=>z.id))+1,start:c.start,end:c.end,type:'other',locator:c.locator,strategy:action,origin:'manual',confidence:'manual'});count++}}
+state.zones.sort((a,b)=>a.start-b.start);$('columnDialog').hidden=true;render();toast(count+' zone(s) traitées')}
+function drawCsvPreview(){const rows=state.csvRows||[],p=$('preview');if(!rows.length){p.textContent='Aucune ligne';return}const header=rows[state.csvHeaderRow-1]||[],cols=Math.max(...rows.map(r=>r.length),0),pages=Math.max(0,Math.ceil(rows.length/75)-1);state.xlsxPage=Math.min(state.xlsxPage||0,pages);
+const displayed=rows.slice(state.xlsxPage*75,(state.xlsxPage+1)*75);const control='<div class="table-controls"><label>Ligne d’en-têtes <select id="headerRowSelect"><option value="0">Sans en-tête</option>'+rows.slice(0,40).map((r,i)=>'<option value="'+(i+1)+'" '+(state.csvHeaderRow===i+1?'selected':'')+'>'+(i+1)+'</option>').join('')+'</select></label></div>';
+const thead='<tr><th>#</th>'+Array.from({length:cols},(_,col)=>'<th><button data-column="'+col+'" class="column-header">'+escapeHTML(header[col]?.value||AnonymiseXlsx.colName(col))+'</button></th>').join('')+'</tr>';
+const tbody=displayed.map((row,k)=>{const number=state.xlsxPage*75+k+1;return '<tr><th class="row-index">'+number+'</th>'+Array.from({length:cols},(_,col)=>{const c=row[col],z=c&&state.zones.find(z=>z.start<c.end&&z.end>c.start);return '<td data-label="'+escapeHTML(header[col]?.value||AnonymiseXlsx.colName(col))+'">'+(c?'<button class="excel-cell'+(z?' sensitive '+z.type:'')+'" data-start="'+c.start+'">'+escapeHTML(c.value)+'</button>':'')+'</td>'}).join('')+'</tr>'}).join('');
+p.innerHTML=control+'<div class="excel-table-wrap"><table class="excel-table"><thead>'+thead+'</thead><tbody>'+tbody+'</tbody></table></div><div class="excel-pages"><button id="xlsxPrevious" '+(!state.xlsxPage?'disabled':'')+'>←</button><span>Page '+(state.xlsxPage+1)+' / '+(pages+1)+'</span><button id="xlsxNext" '+(state.xlsxPage===pages?'disabled':'')+'>→</button></div>';
+p.querySelector('#headerRowSelect').onchange=e=>{state.csvHeaderRow=Number(e.target.value);analyze()};p.querySelectorAll('[data-column]').forEach(b=>b.onclick=()=>openColumnAction(null,Number(b.dataset.column)));p.querySelectorAll('[data-start]').forEach(b=>b.onclick=()=>{const n=Number(b.dataset.start),z=state.zones.find(z=>z.start<=n&&z.end>n);if(z)selectZone(z.id)});p.querySelector('#xlsxPrevious').onclick=()=>{state.xlsxPage--;drawCsvPreview()};p.querySelector('#xlsxNext').onclick=()=>{state.xlsxPage++;drawCsvPreview()};$('displayNotice').textContent='CSV · Gestion par colonne';
+}
 function drawExcelPreview(){
  const preview=$('preview'),sheets=state.office.sheets,si=Math.min(state.xlsxSheet||0,sheets.length-1),sheet=sheets[si];
  if(!sheet){preview.textContent='Aucune cellule textuelle dans le classeur.';return}
@@ -125,13 +138,15 @@ function drawExcelPreview(){
  const from=state.xlsxPage*pageSize,rows=sheet.rows.slice(from,from+pageSize);
  const columns=[...new Set(sheet.rows.flatMap(row=>row.cells.map(c=>c.col)))].sort((a,b)=>a-b);
  const headings=new Map(sheet.headers.map(x=>[x.col,x.label]));
+ const headerControl='<div class="table-controls"><label>Ligne d’en-têtes <select id="headerRowSelect"><option value="0">Sans en-tête</option>'+sheet.rows.slice(0,40).map(row=>'<option value="'+row.number+'" '+(sheet.headerRow===row.number?'selected':'')+'>'+row.number+'</option>').join('')+'</select></label></div>';
  const tabs='<div class="sheet-tabs">'+sheets.map((s,i)=>'<button type="button" class="'+(i===si?'active':'')+'" data-sheet="'+i+'">'+escapeHTML(s.name)+'</button>').join('')+'</div>';
  const headers='<tr><th scope="col" class="row-index">#</th>'+columns.map(col=>'<th scope="col"><button class="column-header" type="button" data-column="'+col+'"><small>'+AnonymiseXlsx.colName(col)+'</small>'+escapeHTML(headings.get(col)||AnonymiseXlsx.colName(col))+'</button></th>').join('')+'</tr>';
  const body=rows.map(row=>'<tr><th scope="row" class="row-index">'+row.number+'</th>'+columns.map(col=>{const cell=row.cells.find(c=>c.col===col);if(!cell)return '<td data-label="'+escapeHTML(headings.get(col)||AnonymiseXlsx.colName(col))+'"></td>';const z=state.zones.find(z=>z.start<cell.end&&z.end>cell.start);return '<td data-label="'+escapeHTML(headings.get(col)||AnonymiseXlsx.colName(col))+'"><button class="excel-cell'+(z?' sensitive '+(z.type||'')+(z.id===state.selected?' selected':'')+(z.strategy==='keep'?' ignored':''):'')+'" data-cell="'+cell.ref+'" type="button">'+escapeHTML(cell.value)+'</button></td>'}).join('')+'</tr>').join('');
- preview.innerHTML=tabs+'<div class="excel-table-wrap"><table class="excel-table"><thead>'+headers+'</thead><tbody>'+body+'</tbody></table></div><div class="excel-pages"><button id="xlsxPrevious" type="button" '+(!state.xlsxPage?'disabled':'')+'>← Page précédente</button><span>Feuille '+(si+1)+'/'+sheets.length+' · '+(state.xlsxPage+1)+'/'+(last+1)+' pages · '+sheet.rows.length+' lignes</span><button id="xlsxNext" type="button" '+(state.xlsxPage>=last?'disabled':'')+'>Page suivante →</button></div>';
+ preview.innerHTML=tabs+headerControl+'<div class="excel-table-wrap"><table class="excel-table"><thead>'+headers+'</thead><tbody>'+body+'</tbody></table></div><div class="excel-pages"><button id="xlsxPrevious" type="button" '+(!state.xlsxPage?'disabled':'')+'>← Page précédente</button><span>Feuille '+(si+1)+'/'+sheets.length+' · '+(state.xlsxPage+1)+'/'+(last+1)+' pages · '+sheet.rows.length+' lignes</span><button id="xlsxNext" type="button" '+(state.xlsxPage>=last?'disabled':'')+'>Page suivante →</button></div>';
+ preview.querySelector('#headerRowSelect').onchange=ev=>{state.headerOverrides[sheet.part]=Number(ev.target.value);const rebuilt=AnonymiseXlsx.build(state.office.parts,state.headerOverrides);state.office={...state.office,...rebuilt};state.source=rebuilt.source;$('rawText').value=state.source;analyze()};
  preview.querySelectorAll('[data-sheet]').forEach(b=>b.onclick=()=>{state.xlsxSheet=+b.dataset.sheet;state.xlsxPage=0;drawExcelPreview()});
  preview.querySelectorAll('[data-cell]').forEach(b=>b.onclick=()=>{const cell=rows.flatMap(r=>r.cells).find(c=>c.ref===b.dataset.cell);const z=cell&&state.zones.find(z=>z.start<cell.end&&z.end>cell.start);if(z)selectZone(z.id);else toast('Aucune zone détectée dans cette cellule. Utilisez la sélection manuelle.')});
- preview.querySelectorAll('[data-column]').forEach(b=>b.onclick=()=>{const col=+b.dataset.column;const z=state.zones.find(z=>{const cell=state.office.cells.find(c=>c.start<=z.start&&c.end>=z.end);return cell&&cell.part===sheet.part&&cell.col===col});if(z){selectZone(z.id);const grouped=AnonymiseEngine.groups(state.zones).find(g=>g.some(x=>x.id===z.id));if(grouped?.length>1){$('groupActions').hidden=false;$('groupCount').textContent=grouped.length+' occurrences';$('groupApply').onclick=()=>{for(const q of grouped){q.strategy=$('strategy').value;q.type=$('category').value}render()};$('groupIgnore').onclick=()=>{for(const q of grouped)q.strategy='keep';render()}}}else toast('Aucune zone détectée pour cette colonne.')});
+ preview.querySelectorAll('[data-column]').forEach(b=>b.onclick=()=>{openColumnAction(sheet.part,+b.dataset.column);return;const col=+b.dataset.column;const z=state.zones.find(z=>{const cell=state.office.cells.find(c=>c.start<=z.start&&c.end>=z.end);return cell&&cell.part===sheet.part&&cell.col===col});if(z){selectZone(z.id);const grouped=AnonymiseEngine.groups(state.zones).find(g=>g.some(x=>x.id===z.id));if(grouped?.length>1){$('groupActions').hidden=false;$('groupCount').textContent=grouped.length+' occurrences';$('groupApply').onclick=()=>{for(const q of grouped){q.strategy=$('strategy').value;q.type=$('category').value}render()};$('groupIgnore').onclick=()=>{for(const q of grouped)q.strategy='keep';render()}}}else toast('Aucune zone détectée pour cette colonne.')});
  preview.querySelector('#xlsxPrevious').onclick=()=>{state.xlsxPage--;drawExcelPreview()};
  preview.querySelector('#xlsxNext').onclick=()=>{state.xlsxPage++;drawExcelPreview()};
  $('displayNotice').textContent='Vue tabulaire Excel · En-têtes cliquables · Colonnes regroupées par feuille';
@@ -156,7 +171,7 @@ function attachEvents(){
  $('strategy').onchange=e=>{const z=selectedZone();if(z){z.strategy=e.target.value;render()}};
  $('removeZone').onclick=()=>{const z=selectedZone();if(!z)return;z.strategy='keep';render();toast('Zone explicitement exclue du traitement et comptabilisée dans le bilan d’export.')};
  $('viewHighlights').onclick=()=>switchView(false);$('viewOriginal').onclick=()=>switchView(true);$('addSelection').onclick=addManual;
- $('closeFile').onclick=closeFile;
+ $('columnApply').onclick=applyColumnAction;$('columnCancel').onclick=()=>$('columnDialog').hidden=true;$('closeFile').onclick=closeFile;
  $('reanalyze').onclick=()=>{if(confirm('Réanalyser le document ? Les corrections manuelles seront perdues.'))analyze()};
  $('exportFile').onclick=async()=>{if(!confirmExport())return;try{if(state.office){const blob=await exportOffice(state.office,state.zones,masked);download(state.name.replace(/(\.[^.]+)?$/,'-anonymise$1'),blob,'application/octet-stream')}else{const text=sanitize();download(state.name.replace(/(\.[^.]+)?$/,'-anonymise$1'),encodeText(text),'application/octet-stream')}toast('Copie anonymisée exportée.')}catch(e){toast(e.message)}};
  $('exportReport').onclick=()=>{if(!confirmExport())return;download(state.name+'-zones.json',new TextEncoder().encode(JSON.stringify(report(),null,2)),'application/json');toast('Rapport JSON exporté (sans valeurs originales).')};
@@ -164,7 +179,7 @@ function attachEvents(){
 }
 async function loadFile(file){
  if(file.size>30*1024*1024&&!confirm('Ce fichier dépasse 30 Mo. L’analyse peut être lente. Continuer ?'))return;
- try{const bytes=new Uint8Array(await file.arrayBuffer());const officeFormat=/\.(docx|xlsx)$/i.exec(file.name)?.[1]?.toUpperCase();const office=officeFormat?await transformZip(bytes,officeFormat):null;const result=office?{content:office.source,encoding:'utf-8',bom:new Uint8Array()}:readEncoding(bytes);state.office=office;state.xlsxSheet=0;state.xlsxPage=0;
+ try{const bytes=new Uint8Array(await file.arrayBuffer());const officeFormat=/\.(docx|xlsx)$/i.exec(file.name)?.[1]?.toUpperCase();const office=officeFormat?await transformZip(bytes,officeFormat):null;const result=office?{content:office.source,encoding:'utf-8',bom:new Uint8Array()}:readEncoding(bytes);state.office=office;state.headerOverrides={};state.csvHeaderRow=1;state.xlsxSheet=0;state.xlsxPage=0;
  if(result.content.includes('\u0000')){toast('Fichier contenant des octets NUL : vérifiez qu’il s’agit bien d’un texte.')}
  state.source=result.content;state.name=file.name;state.encoding=result.encoding;state.bom=result.bom;state.format=officeFormat||detectFormat(file.name,result.content);
  state.newline=result.content.includes('\r\n')?'CRLF':result.content.includes('\r')?'CR':'LF';
