@@ -1,3 +1,10 @@
+2026-10-09 — v1.4.0
+- XLSX : restitution par feuilles, lignes, colonnes et cellules, en-têtes visibles, colonnes cliquables et pagination.
+- Analyse par noms de colonnes Excel et regroupement par feuille/colonne; propagation manuelle limitée à la colonne concernée.
+- Export XLSX : transformation des cellules sélectionnées en préservant les autres cellules et les chaînes partagées originales.
+- Bouton Fermer le fichier : libère le document courant sans réinitialiser le sel.
+- Tests de reconnaissance XLSX et contrôle de l’intégrité du classeur à l’export; cache PWA mis à jour.
+
 2026-10-08 — v1.3.2
 - Correction de la propagation manuelle DOCX/XLSX aux textes équivalents dans la même partie Office.
 - Cache PWA actualisé après les derniers correctifs.
