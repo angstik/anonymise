@@ -3,3 +3,32 @@
 
 /* v1.3 responsive: one vertical page, no horizontal scroll */
 html,body{max-width:100%;overflow-x:hidden}main{width:100%;max-width:1540px}button,input,textarea,select{max-width:100%}.workgrid{grid-template-columns:minmax(210px,250px) minmax(0,1fr) minmax(205px,240px)}.preview{overflow-x:hidden;overflow-wrap:anywhere;white-space:pre-wrap;word-break:break-word;max-height:none;background:#fff}.line{white-space:pre-wrap;overflow-wrap:anywhere;word-break:break-word}.editor{min-height:360px}.zones{max-height:460px}.inspector code{overflow-wrap:anywhere;word-break:break-word}.manual textarea{white-space:pre-wrap;overflow-x:hidden;overflow-wrap:anywhere}.salt-overlay{position:fixed;inset:0;background:#15294ab8;display:grid;place-items:center;z-index:99;padding:18px}.salt-card{width:min(100%,460px);background:white;padding:25px;border-radius:16px;box-shadow:0 20px 60px #15294a44;display:grid;gap:12px}.salt-card h2{margin:0;color:#16458d}.salt-card p{color:#53647c;line-height:1.55;font-size:13px}.salt-card input{border:1px solid #a5b6ce;border-radius:8px;padding:12px;min-width:0;width:100%}.salt-card label{font-size:13px;font-weight:700}@media(max-width:1150px){.workgrid{grid-template-columns:minmax(0,1fr) minmax(0,2fr)}.inspector{grid-column:1/-1}}@media(max-width:720px){main{padding:20px 12px 35px}.topbar{gap:8px;flex-wrap:wrap}.brand{font-size:17px}.workgrid{display:flex;flex-direction:column}.stats{gap:8px}.stats>div{padding:12px}.section-head .actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}.actions button{white-space:normal}.preview{padding:10px 7px;line-height:1.65;font-size:11px}.line-no{width:25px;margin-right:7px}.panel-head{padding:12px}.intro h1{font-size:36px}.privacy{display:none}.salt-overlay{padding:10px}}[hidden]{display:none!important}
+
+/* XLSX: grid fits its container; compact readable table on desktop and mobile. */
+.excel-table-wrap{width:100%;overflow:hidden;min-width:0}
+.excel-table{width:100%;table-layout:fixed;border-collapse:collapse;font-size:12px;line-height:1.5}
+.excel-table th,.excel-table td{border:1px solid #dfe7f4;padding:7px;overflow-wrap:anywhere;word-break:break-word;vertical-align:top}
+.excel-table th{background:#eaf1fd;color:#173c7c;text-align:left;font-weight:700}
+.excel-table .row-index{width:40px;text-align:center;background:#f4f6fb;color:#6a7c97}
+.excel-table .column-header{display:block;background:transparent;border:0;padding:2px;text-align:left;width:100%;white-space:normal;color:#153d80;overflow-wrap:anywhere}
+.column-header small{display:block;color:#7b8ca5;font-size:10px;font-weight:600}
+.excel-cell{display:block;border:0;padding:3px;background:transparent;width:100%;white-space:pre-wrap;text-align:left;overflow-wrap:anywhere;word-break:break-word;font-size:12px;font-family:inherit}
+.excel-cell.sensitive{background:#fff0cb;color:#795111;border-radius:4px}
+.excel-cell.credential{background:#ffe5e9;color:#8b2539}
+.excel-cell.selected{outline:2px solid #285fbd;background:#dbe8ff}
+.excel-cell.ignored{text-decoration:line-through;opacity:.6}
+.excel-cell:focus-visible,.column-header:focus-visible{outline:3px solid #164daa}
+.sheet-tabs{display:flex;gap:8px;flex-wrap:wrap;padding:12px;border-bottom:1px solid #e1eaf5}
+.sheet-tabs button{padding:7px 11px}
+.sheet-tabs button.active{background:#194a91;color:#fff;border-color:#194a91}
+.excel-pages{display:flex;gap:9px;align-items:center;justify-content:space-between;flex-wrap:wrap;border-top:1px solid #e5ebf4;padding:12px;font-size:11px;color:#526788}
+#closeFile{border-color:#ced7e6;color:#153c7a}
+@media(max-width:720px){
+.excel-table,.excel-table tbody,.excel-table tr,.excel-table td{display:block;width:100%}
+.excel-table thead{display:none}
+.excel-table tr{margin:0 0 10px;border:1px solid #cfdbec;border-radius:9px;overflow:hidden}
+.excel-table tr .row-index{display:block;width:100%;text-align:left}
+.excel-table td{border:0;border-top:1px solid #edf0f6;padding:8px 11px}
+.excel-table td:before{content:attr(data-label);display:block;font-size:11px;font-weight:750;color:#174687;margin-bottom:3px}
+.excel-pages button{white-space:normal}
+}
