@@ -1,7 +1,7 @@
 
 const $ = id => document.getElementById(id);
 const state={source:'',name:'',encoding:'utf-8',bom:new Uint8Array(),newline:'LF',format:'TEXT',zones:[],selected:null,csvDelimiter:',',truncated:false,office:null,xlsxSheet:0,xlsxPage:0,headerOverrides:{},csvHeaderRow:1};
-const CATEGORIES={credential:'Credential',email:'E-mail',phone:'Téléphone',ip:'Adresse IP',personal:'Information personnelle',other:'Autre donnée'};
+const CATEGORIES={credential:'Credential',email:'E-mail',phone:'Téléphone',ip:'Adresse IP',personal:'Information personnelle',business:'Entreprise / SIREN / TVA',bank:'Coordonnées bancaires',other:'Autre donnée'};
 const SECRET=/(?:pass(?:word|phrase)?|pwd|secret|token|api[_-]?key|access[_-]?key|auth(?:orization)?|client[_-]?secret|private[_-]?key|bearer|credential|session[_-]?id|iban|ssn|social[_-]?security|num[eé]ro[_ -]?de[_ -]?s[eé]curit[eé]|nss)/i;
 const PERSONAL=/(?:e[-_]?mail|courriel|first[_-]?name|last[_-]?name|full[_-]?name|given[_-]?name|surname|pr[eé]nom|nom[_-]?de[_-]?famille|birth(?:day|date)?|date[_-]?de[_-]?naissance|address|adresse|postal|zip[_-]?code|t[eé]l[eé]phone|mobile|passport|passeport|national[_-]?id|tax[_-]?id|customer[_-]?id|user[_-]?id|city|ville|street|rue|firstname|lastname|nom|name|zipcode|code[_-]?postal|dob)/i;
 const ruleSets=[
@@ -79,8 +79,8 @@ function scanGeneric(out){
   while((m=credentials.exec(text))){const value=m[3];const pos=m.index+m[0].lastIndexOf(value);addCandidate(out,pos,pos+value.length,'credential','regex:'+m[1],'key')}}
 }
 function analyze(){
- const candidates=[];scanStructure(candidates);scanGeneric(candidates);
- const priority={credential:5,email:4,phone:3,ip:2,personal:1,other:0};
+ const candidates=[];scanStructure(candidates);scanGeneric(candidates);for(const z of AnonymiseFrench.detect(state.source))addCandidate(candidates,z.start,z.end,z.type,z.locator,z.confidence);
+ const priority={credential:8,bank:7,business:6,email:5,phone:4,ip:3,personal:2,other:0};
  candidates.sort((a,b)=>a.start-b.start||priority[b.type]-priority[a.type]||b.end-a.end);
  const accepted=[];for(const z of candidates){let intersects=false;for(const prev of accepted){if(prev.start<z.end&&prev.end>z.start){intersects=true;break}}if(!intersects)accepted.push(z)}
  state.zones=accepted.map((z,i)=>({...z,id:i+1}));if(state.office&&state.format!=='XLSX')for(const z of state.zones){const sp=state.office.spans.find(s=>z.start>=s.start&&z.end<=s.end);if(sp)z.locator='part:'+sp.part+'#text['+(state.office.spans.indexOf(sp)+1)+']'}state.selected=state.zones[0]?.id||null;render();
@@ -171,6 +171,7 @@ function attachEvents(){
  $('strategy').onchange=e=>{const z=selectedZone();if(z){z.strategy=e.target.value;render()}};
  $('removeZone').onclick=()=>{const z=selectedZone();if(!z)return;z.strategy='keep';render();toast('Zone explicitement exclue du traitement et comptabilisée dans le bilan d’export.')};
  $('viewHighlights').onclick=()=>switchView(false);$('viewOriginal').onclick=()=>switchView(true);$('addSelection').onclick=addManual;
+ $('versionCheck').onclick=checkVersion;
  $('columnApply').onclick=applyColumnAction;$('columnCancel').onclick=()=>$('columnDialog').hidden=true;$('closeFile').onclick=closeFile;
  $('reanalyze').onclick=()=>{if(confirm('Réanalyser le document ? Les corrections manuelles seront perdues.'))analyze()};
  $('exportFile').onclick=async()=>{if(!confirmExport())return;try{if(state.office){const blob=await exportOffice(state.office,state.zones,masked);download(state.name.replace(/(\.[^.]+)?$/,'-anonymise$1'),blob,'application/octet-stream')}else{const text=sanitize();download(state.name.replace(/(\.[^.]+)?$/,'-anonymise$1'),encodeText(text),'application/octet-stream')}toast('Copie anonymisée exportée.')}catch(e){toast(e.message)}};
@@ -188,6 +189,7 @@ async function loadFile(file){
  }catch(e){toast('Lecture impossible : '+e.message);console.error(e)}
 }
 function closeFile(){state.source='';state.name='';state.office=null;state.zones=[];state.selected=null;state.structuredNodes=[];state.csvRows=[];state.xlsxPage=0;state.xlsxSheet=0;$('workspace').hidden=true;$('file').value='';$('rawText').value='';$('preview').replaceChildren();$('drop').focus();toast('Fichier fermé. Les données de travail ont été libérées.')}
+async function checkVersion(){const button=$('versionCheck');const current='1.6.0';button.disabled=true;button.textContent='Vérification…';try{const r=await fetch('./version.json?check='+Date.now(),{cache:'no-store'});if(!r.ok)throw Error('HTTP '+r.status);const remote=await r.json();const latest=remote.version;const cmp=(x,y)=>x.split('.').map(Number).reduce((acc,n,i)=>acc||Math.sign(n-(y.split('.').map(Number)[i]||0)),0);if(cmp(latest,current)>0){if(confirm('Une nouvelle version '+latest+' est disponible. Mettre à jour maintenant ?')){const reg=await navigator.serviceWorker?.getRegistration();await reg?.update();const keys=await caches.keys();await Promise.all(keys.filter(k=>k.startsWith('anonymise-')).map(k=>caches.delete(k)));location.reload()}}else alert('Anonymise v'+current+' est à jour.')}catch(e){alert('Vérification impossible (connexion requise) : '+e.message)}finally{button.disabled=false;button.textContent='v'+current+' · Vérifier les mises à jour'}}
 function randomSalt(){const data=new Uint8Array(16);crypto.getRandomValues(data);return Array.from(data,x=>x.toString(16).padStart(2,'0')).join('')}
 function showSalt(edit=false){if(!edit||!$('saltInput').value)$('saltInput').value=randomSalt();$('saltDialog').hidden=false;$('saltInput').focus()}
 function saveSalt(){const v=$('saltInput').value.trim();if(!v){toast('Saisissez un sel non vide.');return}AnonymiseEngine.setSalt(v);$('saltDialog').hidden=true;$('saltStatus').textContent='Sel configuré';if(state.source)render();toast('Sel mis à jour : les remplacements déterministes sont recalculés. Conservez ce sel pour reproduire les mêmes résultats.')}

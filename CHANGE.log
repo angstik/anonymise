@@ -1,3 +1,9 @@
+2026-10-10 — v1.6.0
+- Détection locale contextuelle française : civilités, nom, prénom, adresse, date de naissance, raison sociale.
+- Détection SIREN, SIRET, TVA FR, IBAN validés; BIC, code banque et RUM avec reconnaissance de contexte.
+- Numéro de version cliquable pour vérifier la dernière version et déclencher un rechargement du cache PWA.
+- Tests de validation des identifiants et de détection contextuelle.
+
 2026-10-09 — v1.5.0
 - Choix de la ligne d’en-têtes ou absence de titre sur les feuilles Excel et CSV.
 - Vue CSV tabulaire, adaptée au PC et au mobile.

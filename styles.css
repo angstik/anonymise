@@ -34,3 +34,5 @@ html,body{max-width:100%;overflow-x:hidden}main{width:100%;max-width:1540px}butt
 }
 
 .table-controls{padding:9px;background:#f2f6fd}.table-controls label{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.table-controls select,.salt-card select{background:#fff;border:1px solid #b7c7de;border-radius:7px;padding:8px}
+
+.version-link{border:0;background:transparent;color:#164c9c;text-decoration:underline;cursor:pointer;padding:4px;font-size:inherit}.version-link:focus-visible{outline:3px solid #164c9c}
