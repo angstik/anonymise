@@ -15,7 +15,7 @@ function detect(text){
  scan(/\b(?:\d[ ]?){14}\b/g,'business','SIRET',siret);
  scan(/\bFR\s?[0-9A-Z]{2}\s?(?:\d[ ]?){9}\b/gi,'business','TVA_FR',vatFR);
  scan(/\b[A-Z]{2}\d{2}(?:[ ]?[A-Z0-9]){11,30}\b/gi,'bank','IBAN',iban);
- scan(/\b[A-Z]{4}[ ]?[A-Z]{2}[ ]?[A-Z0-9]{2}(?:[ ]?[A-Z0-9]{3})?\b/g,'bank','BIC',bic);
+ scan(/\b[A-Z]{4}[ ]?[A-Z]{2}[ ]?[A-Z0-9]{2}(?:[ ]?[A-Z0-9]{3})?\b/g,'bank','BIC',v=>bic(v)&&!/^IBAN/i.test(v));
  const labelled=[
   {regex:/\b(?:raison\s+sociale|dénomination\s+sociale|société|entreprise)\s*[:：=-]\s*([^\r\n;,]{3,100})/gi,type:'business',rule:'RAISON_SOCIALE'},
   {regex:/\b(?:prénom|prenom|first\s*name)\s*[:：=-]\s*([A-ZÀ-ÖØ-Ý][\p{L}' -]{1,60})/giu,type:'personal',rule:'PRENOM'},
